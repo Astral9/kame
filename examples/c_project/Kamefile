@@ -1,0 +1,29 @@
+#require 'kame/shortcuts/c'
+#require 'kame/shortcuts/shell'
+
+set :verbosity, :high
+set :default_target, 'c_prog'
+
+target 'c_prog' do |t|
+  t.set :cc, 'clang'
+
+  t.rule :all do  
+    t.make('main')
+  end
+
+  t.rule :clean do
+    rm_rf('*.o', '*.out')   &
+    echo('Clean complete!')
+  end
+
+  t.rule 'main', deps: ['main.o', 'utils.o'] do 
+    echo("okay")
+  end
+  
+  t.rule '%.o', deps: ['%.c'], 
+    mode: Kame::RuleMode::RECURSIVE | Kame::RuleMode::FORCE_REBUILD do |name|
+    cc("-c", "-o #{name}.o #{name}.c") |
+    echo("Build complete!")
+  end
+end
+

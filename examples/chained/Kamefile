@@ -1,0 +1,17 @@
+#require 'kame/shortcuts/c'
+#require 'kame/shortcuts/shell'
+
+set :verbosity, :debug
+set :default_target, 'c_prog'
+
+target 'c_prog' do |t|
+  t.rule 'main', deps: ['util.o', 'math.o'] do
+  end
+  
+  t.rule 'util.o', deps: ['util.c', 'math.o'] do
+  end
+  
+  t.rule '%.o', deps: ['%.c'] do |name|
+  end
+end
+
