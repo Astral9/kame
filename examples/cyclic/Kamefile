@@ -5,7 +5,10 @@ set :verbosity, :debug
 set :default_target, 'c_prog'
 
 target 'c_prog' do |t|
-  t.rule 'main', deps: ['main'] do
+  t.rule 'main', deps: ['main_sub'] do
+  end
+  
+  t.rule 'main_sub', deps: ['main'] do
   end
 end
 
