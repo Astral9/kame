@@ -17,6 +17,12 @@ module Kame
       @rules = []
     end
     
+    def make(rule)
+      exec(rule)
+      
+      Kame::Shortcuts::pexit(0)
+    end
+      
     def rule(pat, options = {}, &block)
       raise "No action for rule \"#{pat}\"." unless block_given?
       
@@ -37,18 +43,21 @@ module Kame
         jobs = graph.sort
         exec_jobs jobs
       else
-        info "#{s} is up to date."
+        truify(info "#{s} is up to date.")
       end
     end
     
+    private
     def build_graph(s, g, n, rule)
       return unless rule.needs_update? (s)
       
       matches = rule.match(s)[1..-1]
       
+      filled_deps = []
       rule.deps.each do |dep|
         dep = dep.dup
         matches.each { |m| dep.sub!(/%/, m) }
+        filled_deps << dep
         
         dep_rule = find_rule dep
         if dep_rule.needs_update? dep
@@ -56,13 +65,18 @@ module Kame
           build_graph dep, g, dep_node, dep_rule if n.add_edge dep_node
         end
       end
+      
+      n.args = filled_deps
     end
     
     def exec_jobs(jobs)
-      void(jobs.each do |job|
-        info "Building #{job.name}:"
-        job.rule.exec_rule job.name, job.dependencies.map(&:name)
-      end)
+      jobs.each do |job|
+        unless job.rule.exec_rule job.name, job.args
+          return false
+        end
+      end
+      
+      true
     end
     
     def find_rule(s)
@@ -71,8 +85,6 @@ module Kame
       # or there is such file 
       StubRule.get(s)
     end
-    
-    private :find_rule
   end
   
   module RuleMode
@@ -126,11 +138,11 @@ module Kame
     alias match match?
     
     def exec_rule(s, filled_deps)
-      matches = match? s
-      raise "The rule does not match the name." unless matches
+      #error "Pretending to be executing action for #{s}, and received args #{filled_deps}"
+      act = @action_proc[s, *filled_deps]
+      act.config_delegate = self
       
-      error "Pretending to be executing action for #{s}, and received args #{filled_deps}"
-      # @action_proc[name, *matches].run!
+      act.run!
     end
     
     def file?

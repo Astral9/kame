@@ -25,8 +25,6 @@ module Kame
       end
   
       def sort
-        preserve_node_states!
-        
         queue = []
         
         values = @nodes.values
@@ -48,11 +46,6 @@ module Kame
         
         queue
       end
-      
-      private
-      def preserve_node_states!
-        @nodes.values.each(&:preserve_state!)
-      end
     end
     
     class Node
@@ -61,16 +54,18 @@ module Kame
       
       attr_reader :name, :rule, :incoming_edges, :outgoing_edges
       attr_reader :dependencies
+      attr_accessor :args
       
       attr_accessor :built
       
       def initialize(name, rule)
         @name = name
         @rule = rule
-        raise "Trying to initialise a node (#{name}) with empty rule." unless rule
         
         @incoming_edges = Set.new
         @outgoing_edges = Set.new
+        
+        @dependencies = []
         
         @built = false
       end
@@ -79,16 +74,13 @@ module Kame
         if will_introduce_cycle? node
           falsify(warning "Cyclic dependency found: #{name} -> #{node.name}. Dropping.")
         else
+          @dependencies << node
           truify(-> { @incoming_edges << node; node.outgoing_edges << self }[])
         end
       end
       
       def degree
         @incoming_edges.size
-      end
-      
-      def preserve_state!
-        @dependencies = @incoming_edges.to_a
       end
       
       private

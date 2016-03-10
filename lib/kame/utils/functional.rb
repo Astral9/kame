@@ -12,5 +12,9 @@ module Kame
     def falsify(_)
       false
     end
+    
+    def id(_)
+      self
+    end
   end
 end
