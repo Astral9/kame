@@ -1,21 +1,5 @@
 require 'kame/core'
-require 'kame/utils/tty'
-
-KAME_FILES = ['Kamefile', 'kamefile']
+require 'kame/shortcuts/shell'
 
 include Kame::Delegator
-
-loaded = false
-
-KAME_FILES.each do |f|
-  begin
-    load f
-    puts "loaded #{f}."
-    loaded = true
-    break
-  rescue LoadError
-  end
-end
-
-require 'pry'
-binding.pry
+include Kame::Shortcuts

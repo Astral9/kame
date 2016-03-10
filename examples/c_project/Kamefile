@@ -1,7 +1,4 @@
-#require 'kame/shortcuts/c'
-#require 'kame/shortcuts/shell'
-
-set :verbosity, :high
+set :logging_level, :debug
 set :default_target, 'c_prog'
 
 target 'c_prog' do |t|
@@ -16,14 +13,13 @@ target 'c_prog' do |t|
     echo('Clean complete!')
   end
 
-  t.rule 'main', deps: ['main.o', 'utils.o'] do 
-    echo("okay")
+  t.rule 'main', deps: ['main.o', 'utils.o'] do |name, *deps|
+    cc("-o #{name}.out", deps)
   end
   
   t.rule '%.o', deps: ['%.c'], 
-    mode: Kame::RuleMode::RECURSIVE | Kame::RuleMode::FORCE_REBUILD do |name|
-    cc("-c", "-o #{name}.o #{name}.c") |
-    echo("Build complete!")
+    mode: Kame::RuleMode::RECURSIVE | Kame::RuleMode::FORCE_REBUILD do |name, dep|
+    cc("-c", "-o #{name} #{dep}")
   end
 end
 

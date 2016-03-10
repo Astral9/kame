@@ -1,6 +1,7 @@
 require 'kame/utils/config'
 require 'kame/utils/logging'
 require 'kame/utils/functional'
+require 'kame/algorithm/core'
 
 require 'singleton'
 require 'set'
@@ -10,11 +11,18 @@ module Kame
     include Kame::Config
     include Kame::Logging
     include Kame::Functional
+    include Kame::Algorithm
     
     def initialize
       @rules = []
     end
     
+    def make(rule)
+      exec(rule)
+      
+      Kame::Shortcuts::pexit(0)
+    end
+      
     def rule(pat, options = {}, &block)
       raise "No action for rule \"#{pat}\"." unless block_given?
       
@@ -22,22 +30,28 @@ module Kame
     end
     
     def exec(s)
-      void(exec_rec s, Set.new, [])
-    end
-  
-    # TODO: use graph -> support parallelism
-    def exec_rec(s, built, building)
-      debug "Building #{s}."
+      graph = Graph.new
       
       rule = find_rule s
       raise "No rule for making \"#{s}\". Stop." unless rule
-      # end if the rule doesn't need to be built
-      debug "But #{s} is a file." if rule.file?
-      return unless rule.needs_update?(s)
+      if rule.needs_update? s
+        node = Node.new s, rule
+        
+        graph.add_node(node)
+        build_graph s, graph, node, rule
+        
+        jobs = graph.sort
+        exec_jobs jobs
+      else
+        truify(info "#{s} is up to date.")
+      end
+    end
+    
+    private
+    def build_graph(s, g, n, rule)
+      return unless rule.needs_update? (s)
       
       matches = rule.match(s)[1..-1]
-      
-      building << s
       
       filled_deps = []
       rule.deps.each do |dep|
@@ -45,30 +59,32 @@ module Kame
         matches.each { |m| dep.sub!(/%/, m) }
         filled_deps << dep
         
-        if built.include? dep
-          info "Dependency #{s} -> #{dep} already built. Skipping."
-        elsif building.include? dep
-          warning "Cyclic dependency found: #{s} -> #{dep}. Ignoring."
-        else
-          exec_rec dep, built, building
+        dep_rule = find_rule dep
+        if dep_rule.needs_update? dep
+          dep_node = g.has_node?(dep) ? g.get_node(dep) : g.add_node(Node.new(dep, dep_rule))
+          build_graph dep, g, dep_node, dep_rule if n.add_edge dep_node
         end
       end
       
-      building.pop
-      info "Building #{s}: "
-      rule.exec_rule s, filled_deps
+      n.args = filled_deps
+    end
+    
+    def exec_jobs(jobs)
+      jobs.each do |job|
+        unless job.rule.exec_rule job.name, job.args
+          return false
+        end
+      end
       
-      built << s
+      true
     end
     
     def find_rule(s)
-      # there is such rule
+      # either there is such rule
       @rules.find { |r| r.match? s } ||
       # or there is such file 
       StubRule.get(s)
     end
-    
-    private :exec_rec, :find_rule
   end
   
   module RuleMode
@@ -122,14 +138,11 @@ module Kame
     alias match match?
     
     def exec_rule(s, filled_deps)
-      matches = match? s
-      raise "The rule does not match the name." unless matches
+      #error "Pretending to be executing action for #{s}, and received args #{filled_deps}"
+      act = @action_proc[s, *filled_deps]
+      act.config_delegate = self
       
-      matches = matches.to_a[1..-1]
-      name = s[0...-File.extname(s).length]
-      
-      error "pretending to be executing action for #{s}, and received args #{filled_deps}"
-      # @action_proc[name, *matches].run!
+      act.run!
     end
     
     def file?
