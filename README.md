@@ -23,6 +23,7 @@ any dependency (other than Ruby itself) the setup is fairly straight forward:
 
 1. clone this repo.
 2. in your shell (or shell profile files), set the alias
+
   ```
   alias kame = ruby -I /path/to/the/repo/lib /path/to/the/repo/lib/kame.rb
   ```
