@@ -9,16 +9,16 @@ target 'c_prog' do |t|
   end
 
   t.rule :clean do
-    rm_rf('*.o', '*.out')   &
+    rm_rf('*.o', 'main')    &
     echo('Clean complete!')
   end
 
   t.rule 'main', deps: ['main.o', 'utils.o'] do |name, *deps|
-    cc("-o #{name}.out", deps)
+    cc("-o #{name}", deps)
   end
   
   t.rule '%.o', deps: ['%.c'], 
-    mode: Kame::RuleMode::RECURSIVE | Kame::RuleMode::FORCE_REBUILD do |name, dep|
+    mode: Kame::RuleMode::RECURSIVE do |name, dep|
     cc("-c", "-o #{name} #{dep}")
   end
 end

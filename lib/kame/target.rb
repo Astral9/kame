@@ -126,10 +126,9 @@ module Kame
     end
     
     def needs_update?(s)
-      return true if RuleMode::FORCE_REBUILD
+      return true if @options[:mode] & RuleMode::FORCE_REBUILD > 0
       
-      # TODO: rewrite stub
-      true
+      !(File.exists? s)
     end
     
     def match?(s)
